@@ -130,14 +130,23 @@ export default function LandingPage() {
                 >
                   Ver demonstracao
                 </ScrollButton>
-                <a
-                  href="https://wa.me/5511999999999"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="border border-green-600 text-green-600 hover:bg-green-50 font-semibold px-8 py-3 rounded-lg transition-colors text-base text-center"
-                >
-                  Falar no WhatsApp
-                </a>
+                {process.env.NEXT_PUBLIC_WHATSAPP_DEMO_NUMBER ? (
+                  <a
+                    href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_DEMO_NUMBER}?text=Olá!%20Quero%20conhecer%20o%20ZapReply%20AI.`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border border-green-600 text-green-600 hover:bg-green-50 font-semibold px-8 py-3 rounded-lg transition-colors text-base text-center"
+                  >
+                    Falar no WhatsApp
+                  </a>
+                ) : (
+                  <ScrollButton
+                    targetId="demo-form"
+                    className="border border-green-600 text-green-600 hover:bg-green-50 font-semibold px-8 py-3 rounded-lg transition-colors text-base"
+                  >
+                    Falar no WhatsApp
+                  </ScrollButton>
+                )}
               </div>
             </div>
 
