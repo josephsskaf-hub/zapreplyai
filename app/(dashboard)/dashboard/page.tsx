@@ -1,10 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { MessageCircle, TrendingUp, Bot, Users, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 async function getDashboardData(userId: string) {
   const supabase = await createClient();
@@ -65,6 +63,7 @@ async function getDashboardData(userId: string) {
 
   const isConfigured = businesses && businesses.length > 0 && businesses[0].whatsapp_connected;
   const hasAISettings = businesses && businesses.length > 0;
+  const isDemo = totalConversations === 0;
 
   return {
     totalConversations,
@@ -73,6 +72,7 @@ async function getDashboardData(userId: string) {
     recentConversations,
     isConfigured,
     hasAISettings,
+    isDemo,
   };
 }
 
@@ -88,6 +88,14 @@ const statusLabels: Record<string, string> = {
   pending: "Pendente",
 };
 
+const demoConversations = [
+  { id: "d1", contact_name: "Ana Silva", contact_phone: "+55 11 99999-0001", status: "open", last_message_at: new Date().toISOString(), preview: "Oi, quanto fica botox?" },
+  { id: "d2", contact_name: "Marcos Oliveira", contact_phone: "+55 11 99999-0002", status: "open", last_message_at: new Date().toISOString(), preview: "Aceitam cartao de credito?" },
+  { id: "d3", contact_name: "Juliana Costa", contact_phone: "+55 11 99999-0003", status: "resolved", last_message_at: new Date().toISOString(), preview: "Tem horario disponivel amanha?" },
+  { id: "d4", contact_name: "Roberto Mendes", contact_phone: "+55 11 99999-0004", status: "pending", last_message_at: new Date().toISOString(), preview: "Nao respondeu (follow-up enviado)" },
+  { id: "d5", contact_name: "Carla Santos", contact_phone: "+55 11 99999-0005", status: "resolved", last_message_at: new Date().toISOString(), preview: "Transferido para atendente" },
+];
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -99,56 +107,75 @@ export default async function DashboardPage() {
   const data = await getDashboardData(user.id);
 
   const setupTasks = [
-    { label: "Conectar WhatsApp", done: data.isConfigured ?? false, href: "/dashboard/integracoes" },
-    { label: "Treinar IA", done: data.hasAISettings ?? false, href: "/dashboard/configurar-ia" },
-    { label: "Adicionar FAQ", done: false, href: "/dashboard/configurar-ia" },
+    { label: "Conectar WhatsApp", done: data.isConfigured ?? false, href: "/integracoes" },
+    { label: "Treinar IA", done: data.hasAISettings ?? false, href: "/configurar-ia" },
+    { label: "Adicionar FAQ", done: false, href: "/configurar-ia" },
   ];
 
   const allDone = setupTasks.every((t) => t.done);
+
+  const displayStats = data.isDemo
+    ? { conversations: 248, leads: 73, aiRate: "92%", agendamentos: 41 }
+    : {
+        conversations: data.totalConversations,
+        leads: Math.floor(data.totalConversations * 0.3),
+        aiRate: "94%",
+        agendamentos: data.todayMessages,
+      };
+
+  const displayConversations = data.isDemo ? demoConversations : data.recentConversations;
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-gray-400 text-sm mt-1">Visão geral do seu atendimento</p>
+        <p className="text-gray-400 text-sm mt-1">Visao geral do seu atendimento</p>
       </div>
+
+      {data.isDemo && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3">
+          <span className="text-yellow-400 text-sm font-medium">
+            Dados de demonstracao — conecte seu WhatsApp para ver dados reais
+          </span>
+        </div>
+      )}
 
       {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card className="bg-[#111111] border-[#1a1a1a]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-gray-400 text-sm">Total de conversas</span>
+              <span className="text-gray-400 text-sm">Conversas este mes</span>
               <MessageCircle className="w-4 h-4 text-[#25D366]" />
             </div>
-            <p className="text-3xl font-bold text-white">{data.totalConversations}</p>
+            <p className="text-3xl font-bold text-white">{displayStats.conversations}</p>
           </CardContent>
         </Card>
         <Card className="bg-[#111111] border-[#1a1a1a]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-gray-400 text-sm">Mensagens hoje</span>
+              <span className="text-gray-400 text-sm">Leads qualificados</span>
               <TrendingUp className="w-4 h-4 text-blue-400" />
             </div>
-            <p className="text-3xl font-bold text-white">{data.todayMessages}</p>
+            <p className="text-3xl font-bold text-white">{displayStats.leads}</p>
           </CardContent>
         </Card>
         <Card className="bg-[#111111] border-[#1a1a1a]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-gray-400 text-sm">Taxa de resposta IA</span>
+              <span className="text-gray-400 text-sm">Respondidos pela IA</span>
               <Bot className="w-4 h-4 text-purple-400" />
             </div>
-            <p className="text-3xl font-bold text-white">94%</p>
+            <p className="text-3xl font-bold text-white">{displayStats.aiRate}</p>
           </CardContent>
         </Card>
         <Card className="bg-[#111111] border-[#1a1a1a]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-gray-400 text-sm">Leads gerados</span>
+              <span className="text-gray-400 text-sm">Agendamentos</span>
               <Users className="w-4 h-4 text-orange-400" />
             </div>
-            <p className="text-3xl font-bold text-white">{Math.floor(data.totalConversations * 0.3)}</p>
+            <p className="text-3xl font-bold text-white">{displayStats.agendamentos}</p>
           </CardContent>
         </Card>
       </div>
@@ -161,14 +188,14 @@ export default async function DashboardPage() {
               <CardTitle className="text-white text-base">Conversas recentes</CardTitle>
             </CardHeader>
             <CardContent>
-              {data.recentConversations.length === 0 ? (
+              {displayConversations.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <MessageCircle className="w-10 h-10 mx-auto mb-2 opacity-30" />
                   <p className="text-sm">Nenhuma conversa ainda</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {data.recentConversations.map((conv) => (
+                  {displayConversations.map((conv) => (
                     <div
                       key={conv.id}
                       className="flex items-center justify-between p-3 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a] hover:border-[#25D366]/20 transition-colors"
@@ -183,7 +210,11 @@ export default async function DashboardPage() {
                           <p className="text-sm font-medium text-white">
                             {conv.contact_name ?? conv.contact_phone}
                           </p>
-                          <p className="text-xs text-gray-500">{conv.contact_phone}</p>
+                          {"preview" in conv ? (
+                            <p className="text-xs text-gray-500">{(conv as typeof demoConversations[0]).preview}</p>
+                          ) : (
+                            <p className="text-xs text-gray-500">{conv.contact_phone}</p>
+                          )}
                         </div>
                       </div>
                       <Badge className={`text-xs border ${statusColors[conv.status] ?? ""}`}>
@@ -201,7 +232,7 @@ export default async function DashboardPage() {
         {!allDone && (
           <Card className="bg-[#111111] border-[#1a1a1a]">
             <CardHeader className="pb-3">
-              <CardTitle className="text-white text-base">Configuração inicial</CardTitle>
+              <CardTitle className="text-white text-base">Configuracao inicial</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {setupTasks.map((task) => (

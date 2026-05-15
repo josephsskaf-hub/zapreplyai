@@ -14,19 +14,38 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Save, CheckCircle } from "lucide-react";
 
-type Tone = "professional" | "friendly" | "formal" | "casual";
+type Tone = "professional" | "friendly" | "formal";
 
 type FormData = {
   ai_name: string;
+  business_type: string;
   tone: Tone;
   base_prompt: string;
   off_hours_message: string;
   response_delay_seconds: number;
   ai_enabled: boolean;
+  escalation_keywords: string;
 };
 
 type FAQItem = { question: string; answer: string };
-type ProductItem = { name: string; price: string; description: string };
+
+type ScheduleDay = {
+  enabled: boolean;
+  start: string;
+  end: string;
+};
+
+const DAYS = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"];
+
+const defaultSchedule: ScheduleDay[] = [
+  { enabled: true, start: "08:00", end: "18:00" },
+  { enabled: true, start: "08:00", end: "18:00" },
+  { enabled: true, start: "08:00", end: "18:00" },
+  { enabled: true, start: "08:00", end: "18:00" },
+  { enabled: true, start: "08:00", end: "18:00" },
+  { enabled: false, start: "09:00", end: "13:00" },
+  { enabled: false, start: "09:00", end: "13:00" },
+];
 
 export default function ConfigurarIAPage() {
   const supabase = createClient();
@@ -36,14 +55,16 @@ export default function ConfigurarIAPage() {
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
-  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleDay[]>(defaultSchedule);
   const [form, setForm] = useState<FormData>({
     ai_name: "Assistente",
+    business_type: "",
     tone: "professional",
     base_prompt: "",
     off_hours_message: "",
     response_delay_seconds: 3,
     ai_enabled: true,
+    escalation_keywords: "falar com humano, atendente, gerente, reclamacao",
   });
 
   const loadSettings = useCallback(async () => {
@@ -75,14 +96,16 @@ export default function ConfigurarIAPage() {
       setSettingsId(settings.id);
       setForm({
         ai_name: settings.ai_name ?? "Assistente",
+        business_type: settings.business_type ?? "",
         tone: (settings.tone ?? "professional") as Tone,
         base_prompt: settings.base_prompt ?? "",
         off_hours_message: settings.off_hours_message ?? "",
         response_delay_seconds: settings.response_delay_seconds ?? 3,
         ai_enabled: settings.ai_enabled ?? true,
+        escalation_keywords: settings.escalation_keywords ?? "falar com humano, atendente, gerente, reclamacao",
       });
       setFaqs(settings.faq ?? []);
-      setProducts(settings.products ?? []);
+      if (settings.schedule) setSchedule(settings.schedule);
     }
     setLoading(false);
   }, [supabase]);
@@ -98,11 +121,11 @@ export default function ConfigurarIAPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!businessId) {
-      toast({ title: "Nenhum negócio configurado", variant: "destructive" });
+      toast({ title: "Nenhum negocio configurado", variant: "destructive" });
       return;
     }
     setSaving(true);
-    const payload = { ...form, faq: faqs, products, business_id: businessId };
+    const payload = { ...form, faq: faqs, schedule, business_id: businessId };
 
     if (settingsId) {
       const { error } = await supabase.from("ai_settings").update(payload).eq("id", settingsId);
@@ -128,7 +151,7 @@ export default function ConfigurarIAPage() {
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
-    toast({ title: "Configurações salvas!" });
+    toast({ title: "Configuracoes salvas!" });
   };
 
   const addFaq = () => setFaqs((prev) => [...prev, { question: "", answer: "" }]);
@@ -136,10 +159,8 @@ export default function ConfigurarIAPage() {
     setFaqs((prev) => prev.map((f, idx) => (idx === i ? { ...f, [field]: val } : f)));
   const removeFaq = (i: number) => setFaqs((prev) => prev.filter((_, idx) => idx !== i));
 
-  const addProduct = () => setProducts((prev) => [...prev, { name: "", price: "", description: "" }]);
-  const updateProduct = (i: number, field: keyof ProductItem, val: string) =>
-    setProducts((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: val } : p)));
-  const removeProduct = (i: number) => setProducts((prev) => prev.filter((_, idx) => idx !== i));
+  const updateSchedule = (i: number, field: keyof ScheduleDay, val: string | boolean) =>
+    setSchedule((prev) => prev.map((d, idx) => (idx === i ? { ...d, [field]: val } : d)));
 
   if (loading) {
     return (
@@ -167,10 +188,10 @@ export default function ConfigurarIAPage() {
       </div>
 
       <form onSubmit={onSubmit} className="space-y-6">
-        {/* Basic settings */}
+        {/* Identidade da IA */}
         <Card className="bg-[#111111] border-[#1a1a1a]">
           <CardHeader>
-            <CardTitle className="text-white text-base">Configurações básicas</CardTitle>
+            <CardTitle className="text-white text-base">Identidade da IA</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -191,71 +212,64 @@ export default function ConfigurarIAPage() {
                   value={form.ai_name}
                   onChange={(e) => handleChange("ai_name", e.target.value)}
                   required
-                  className="bg-[#0a0a0a] border-[#2a2a2a] text-white"
+                  placeholder="Ex: Assistente, Sofia, Mariana..."
+                  className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-gray-300">Tom de voz</Label>
+                <Label className="text-gray-300">Tipo de negocio</Label>
                 <Select
-                  value={form.tone}
-                  onValueChange={(val) => handleChange("tone", val as Tone)}
+                  value={form.business_type}
+                  onValueChange={(val) => handleChange("business_type", val)}
                 >
                   <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white">
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent className="bg-[#111111] border-[#2a2a2a] text-white">
-                    <SelectItem value="professional">Profissional</SelectItem>
-                    <SelectItem value="friendly">Amigável</SelectItem>
-                    <SelectItem value="formal">Formal</SelectItem>
-                    <SelectItem value="casual">Casual</SelectItem>
+                    <SelectItem value="clinica-estetica">Clinica Estetica</SelectItem>
+                    <SelectItem value="odontologia">Odontologia</SelectItem>
+                    <SelectItem value="imobiliaria">Imobiliaria</SelectItem>
+                    <SelectItem value="restaurante">Restaurante</SelectItem>
+                    <SelectItem value="advocacia">Advocacia</SelectItem>
+                    <SelectItem value="academia">Academia</SelectItem>
+                    <SelectItem value="outros">Outros</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-gray-300">Prompt base</Label>
+              <Label className="text-gray-300">Tom de voz</Label>
+              <Select
+                value={form.tone}
+                onValueChange={(val) => handleChange("tone", val as Tone)}
+              >
+                <SelectTrigger className="bg-[#0a0a0a] border-[#2a2a2a] text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#111111] border-[#2a2a2a] text-white">
+                  <SelectItem value="professional">Profissional</SelectItem>
+                  <SelectItem value="friendly">Amigavel</SelectItem>
+                  <SelectItem value="formal">Formal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-gray-300">Prompt base (instrucoes gerais)</Label>
               <Textarea
                 value={form.base_prompt}
                 onChange={(e) => handleChange("base_prompt", e.target.value)}
-                placeholder="Ex: Você é a assistente virtual da Loja XYZ. Responda de forma educada, focando em ajudar o cliente a encontrar o produto certo..."
+                placeholder="Ex: Voce e a assistente da Clinica XYZ. Responda de forma educada, focando em ajudar o cliente..."
                 rows={4}
-                className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600 resize-none"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-gray-300">
-                Delay de resposta: <span className="text-[#25D366]">{form.response_delay_seconds}s</span>
-              </Label>
-              <input
-                type="range"
-                min={0}
-                max={10}
-                value={form.response_delay_seconds}
-                onChange={(e) => handleChange("response_delay_seconds", Number(e.target.value))}
-                className="w-full accent-[#25D366]"
-              />
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>0s (imediato)</span>
-                <span>10s</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-gray-300">Mensagem fora do horário</Label>
-              <Textarea
-                value={form.off_hours_message}
-                onChange={(e) => handleChange("off_hours_message", e.target.value)}
-                placeholder="Ex: Olá! Estamos fora do horário de atendimento. Retornaremos em breve."
-                rows={2}
                 className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600 resize-none"
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* FAQ */}
+        {/* Servicos e FAQ */}
         <Card className="bg-[#111111] border-[#1a1a1a]">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-white text-base">FAQ — Perguntas frequentes</CardTitle>
+            <CardTitle className="text-white text-base">Servicos e FAQ</CardTitle>
             <Button
               type="button"
               variant="outline"
@@ -268,7 +282,9 @@ export default function ConfigurarIAPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {faqs.length === 0 && (
-              <p className="text-gray-500 text-sm text-center py-4">Nenhuma pergunta adicionada ainda</p>
+              <p className="text-gray-500 text-sm text-center py-4">
+                Adicione perguntas e respostas que a IA deve saber responder
+              </p>
             )}
             {faqs.map((faq, i) => (
               <div key={i} className="p-3 bg-[#0a0a0a] rounded-xl border border-[#1a1a1a] space-y-2">
@@ -301,57 +317,94 @@ export default function ConfigurarIAPage() {
           </CardContent>
         </Card>
 
-        {/* Products */}
+        {/* Horario de Atendimento */}
         <Card className="bg-[#111111] border-[#1a1a1a]">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-white text-base">Produtos / Serviços</CardTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addProduct}
-              className="border-[#25D366]/30 text-[#25D366] hover:bg-[#25D366]/10"
-            >
-              <Plus className="w-4 h-4 mr-1" /> Adicionar
-            </Button>
+          <CardHeader>
+            <CardTitle className="text-white text-base">Horario de Atendimento</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {products.length === 0 && (
-              <p className="text-gray-500 text-sm text-center py-4">Nenhum produto adicionado ainda</p>
-            )}
-            {products.map((product, i) => (
-              <div key={i} className="p-3 bg-[#0a0a0a] rounded-xl border border-[#1a1a1a] space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nome do produto"
-                    value={product.name}
-                    onChange={(e) => updateProduct(i, "name", e.target.value)}
-                    className="bg-[#111111] border-[#2a2a2a] text-white placeholder:text-gray-600 flex-1"
-                  />
-                  <Input
-                    placeholder="Preço (ex: R$97)"
-                    value={product.price}
-                    onChange={(e) => updateProduct(i, "price", e.target.value)}
-                    className="bg-[#111111] border-[#2a2a2a] text-white placeholder:text-gray-600 w-36"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeProduct(i)}
-                    className="text-red-400 hover:bg-red-500/10 hover:text-red-400"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-                <Input
-                  placeholder="Descrição"
-                  value={product.description}
-                  onChange={(e) => updateProduct(i, "description", e.target.value)}
-                  className="bg-[#111111] border-[#2a2a2a] text-white placeholder:text-gray-600"
+            {DAYS.map((day, i) => (
+              <div key={day} className="flex items-center gap-4">
+                <Switch
+                  checked={schedule[i].enabled}
+                  onCheckedChange={(val) => updateSchedule(i, "enabled", val)}
+                  className="data-[state=checked]:bg-[#25D366]"
                 />
+                <span className={`text-sm w-16 shrink-0 ${schedule[i].enabled ? "text-white" : "text-gray-600"}`}>
+                  {day}
+                </span>
+                {schedule[i].enabled ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={schedule[i].start}
+                      onChange={(e) => updateSchedule(i, "start", e.target.value)}
+                      className="bg-[#0a0a0a] border-[#2a2a2a] text-white w-28 text-sm"
+                    />
+                    <span className="text-gray-500 text-sm">ate</span>
+                    <Input
+                      type="time"
+                      value={schedule[i].end}
+                      onChange={(e) => updateSchedule(i, "end", e.target.value)}
+                      className="bg-[#0a0a0a] border-[#2a2a2a] text-white w-28 text-sm"
+                    />
+                  </div>
+                ) : (
+                  <span className="text-gray-600 text-sm">Fechado</span>
+                )}
               </div>
             ))}
+            <div className="pt-3 border-t border-[#1a1a1a] space-y-2">
+              <Label className="text-gray-300">Mensagem fora do horario</Label>
+              <Textarea
+                value={form.off_hours_message}
+                onChange={(e) => handleChange("off_hours_message", e.target.value)}
+                placeholder="Ex: Ola! Estamos fora do horario de atendimento. Retornaremos em breve."
+                rows={2}
+                className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600 resize-none"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Escalada para Humano */}
+        <Card className="bg-[#111111] border-[#1a1a1a]">
+          <CardHeader>
+            <CardTitle className="text-white text-base">Escalada para Humano</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-gray-300 mb-2 block">
+                Palavras-chave que acionam transferencia para atendente humano
+              </Label>
+              <Textarea
+                value={form.escalation_keywords}
+                onChange={(e) => handleChange("escalation_keywords", e.target.value)}
+                placeholder="Ex: falar com humano, atendente, gerente, reclamacao"
+                rows={3}
+                className="bg-[#0a0a0a] border-[#2a2a2a] text-white placeholder:text-gray-600 resize-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Separe as palavras-chave por virgula. Quando o cliente mencionar alguma delas, a conversa sera transferida.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-gray-300">
+                Delay de resposta: <span className="text-[#25D366]">{form.response_delay_seconds}s</span>
+              </Label>
+              <input
+                type="range"
+                min={0}
+                max={10}
+                value={form.response_delay_seconds}
+                onChange={(e) => handleChange("response_delay_seconds", Number(e.target.value))}
+                className="w-full accent-[#25D366]"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0s (imediato)</span>
+                <span>10s</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -361,7 +414,7 @@ export default function ConfigurarIAPage() {
           disabled={saving}
         >
           <Save className="w-4 h-4" />
-          {saving ? "Salvando..." : "Salvar configurações"}
+          {saving ? "Salvando..." : "Salvar configuracoes"}
         </Button>
       </form>
     </div>

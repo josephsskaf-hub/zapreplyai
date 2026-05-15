@@ -18,6 +18,7 @@ type Conversation = {
   status: string;
   last_message_at: string;
   business_id: string;
+  preview?: string;
 };
 
 type Message = {
@@ -39,6 +40,83 @@ const statusLabels: Record<string, string> = {
   pending: "Pendente",
 };
 
+const DEMO_CONVERSATIONS: Conversation[] = [
+  {
+    id: "demo-1",
+    contact_name: "Ana Silva",
+    contact_phone: "+55 11 99999-0001",
+    status: "open",
+    last_message_at: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+    business_id: "demo",
+    preview: "Oi, quanto fica botox?",
+  },
+  {
+    id: "demo-2",
+    contact_name: "Marcos Oliveira",
+    contact_phone: "+55 11 99999-0002",
+    status: "open",
+    last_message_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    business_id: "demo",
+    preview: "Aceitam cartao de credito?",
+  },
+  {
+    id: "demo-3",
+    contact_name: "Juliana Costa",
+    contact_phone: "+55 11 99999-0003",
+    status: "resolved",
+    last_message_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    business_id: "demo",
+    preview: "Tem horario disponivel amanha de manha?",
+  },
+  {
+    id: "demo-4",
+    contact_name: "Roberto Mendes",
+    contact_phone: "+55 11 99999-0004",
+    status: "pending",
+    last_message_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    business_id: "demo",
+    preview: "Nao respondeu (follow-up enviado)",
+  },
+  {
+    id: "demo-5",
+    contact_name: "Carla Santos",
+    contact_phone: "+55 11 99999-0005",
+    status: "resolved",
+    last_message_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    business_id: "demo",
+    preview: "Transferido para atendente",
+  },
+];
+
+const DEMO_MESSAGES: Record<string, Message[]> = {
+  "demo-1": [
+    { id: "m1", role: "user", content: "Oi, quanto fica botox?", sent_at: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+    { id: "m2", role: "assistant", content: "Oi Ana! O valor depende das areas. Voce quer testa, olhos ou face toda? Posso agendar uma avaliacao gratuita.", sent_at: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
+    { id: "m3", role: "user", content: "Quero testa e ao redor dos olhos", sent_at: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
+    { id: "m4", role: "assistant", content: "Perfeito! Tenho horario amanha as 14h ou depois de amanha as 10h. Qual fica melhor?", sent_at: new Date(Date.now() - 1 * 60 * 1000).toISOString() },
+  ],
+  "demo-2": [
+    { id: "m5", role: "user", content: "Aceitam cartao de credito?", sent_at: new Date(Date.now() - 16 * 60 * 1000).toISOString() },
+    { id: "m6", role: "assistant", content: "Oi Marcos! Sim, aceitamos todos os cartoes, Pix e dinheiro. Posso te ajudar com mais alguma coisa?", sent_at: new Date(Date.now() - 15 * 60 * 1000).toISOString() },
+  ],
+  "demo-3": [
+    { id: "m7", role: "user", content: "Tem horario disponivel amanha de manha?", sent_at: new Date(Date.now() - 62 * 60 * 1000).toISOString() },
+    { id: "m8", role: "assistant", content: "Oi Juliana! Temos 9h e 10h30 disponíveis amanha de manha. Qual prefere?", sent_at: new Date(Date.now() - 61 * 60 * 1000).toISOString() },
+    { id: "m9", role: "user", content: "9h por favor", sent_at: new Date(Date.now() - 60 * 60 * 1000).toISOString() },
+    { id: "m10", role: "assistant", content: "Perfeito! Agendado para amanha as 9h. Te mando um lembrete mais tarde!", sent_at: new Date(Date.now() - 59 * 60 * 1000).toISOString() },
+  ],
+  "demo-4": [
+    { id: "m11", role: "user", content: "Quero saber mais sobre os planos", sent_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() },
+    { id: "m12", role: "assistant", content: "Oi Roberto! Claro, qual e o seu tipo de negocio? Assim mostro o que mais se encaixa.", sent_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() },
+    { id: "m13", role: "system", content: "Follow-up automatico enviado: Oi Roberto! Vimos que voce ficou interessado em nossos planos. Posso te ajudar?", sent_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
+  ],
+  "demo-5": [
+    { id: "m14", role: "user", content: "Quero falar com uma atendente", sent_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() },
+    { id: "m15", role: "assistant", content: "Claro, Carla! Vou transferir voce para uma atendente humana. So um momento!", sent_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() },
+    { id: "m16", role: "system", content: "Conversa transferida para atendente humano.", sent_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
+  ],
+};
+
 export default function ConversasPage() {
   const supabase = createClient();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -51,6 +129,7 @@ export default function ConversasPage() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,7 +164,10 @@ export default function ConversasPage() {
       .from("businesses")
       .select("id")
       .eq("user_id", user.id);
+
     if (!businesses?.length) {
+      setConversations(DEMO_CONVERSATIONS);
+      setIsDemo(true);
       setLoadingConvs(false);
       return;
     }
@@ -99,13 +181,26 @@ export default function ConversasPage() {
       )
       .order("last_message_at", { ascending: false });
 
-    setConversations(convs ?? []);
+    if (!convs || convs.length === 0) {
+      setConversations(DEMO_CONVERSATIONS);
+      setIsDemo(true);
+    } else {
+      setConversations(convs ?? []);
+      setIsDemo(false);
+    }
     setLoadingConvs(false);
   };
 
   const loadMessages = async (conv: Conversation) => {
     setSelectedConv(conv);
     setLoadingMessages(true);
+
+    if (isDemo || conv.id.startsWith("demo-")) {
+      setMessages(DEMO_MESSAGES[conv.id] ?? []);
+      setLoadingMessages(false);
+      return;
+    }
+
     const { data: msgs } = await supabase
       .from("messages")
       .select("*")
@@ -118,6 +213,19 @@ export default function ConversasPage() {
 
   const sendReply = async () => {
     if (!reply.trim() || !selectedConv) return;
+
+    if (isDemo) {
+      const newMsg: Message = {
+        id: `local-${Date.now()}`,
+        role: "assistant",
+        content: reply,
+        sent_at: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, newMsg]);
+      setReply("");
+      return;
+    }
+
     setSending(true);
     const { data: msg, error } = await supabase
       .from("messages")
@@ -139,7 +247,14 @@ export default function ConversasPage() {
       {/* Left panel */}
       <div className="w-80 shrink-0 border-r border-[#1a1a1a] flex flex-col bg-[#111111]">
         <div className="p-4 space-y-3 border-b border-[#1a1a1a]">
-          <h2 className="text-white font-semibold">Conversas</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-white font-semibold">Conversas</h2>
+            {isDemo && (
+              <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                Demo
+              </span>
+            )}
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
@@ -195,7 +310,11 @@ export default function ConversasPage() {
                     {statusLabels[conv.status] ?? conv.status}
                   </Badge>
                 </div>
-                <p className="text-xs text-gray-500">{conv.contact_phone}</p>
+                {conv.preview ? (
+                  <p className="text-xs text-gray-500 truncate">{conv.preview}</p>
+                ) : (
+                  <p className="text-xs text-gray-500">{conv.contact_phone}</p>
+                )}
               </div>
             ))
           )}
@@ -221,9 +340,16 @@ export default function ConversasPage() {
                 </h3>
                 <p className="text-xs text-gray-500">{selectedConv.contact_phone}</p>
               </div>
-              <Badge className={`text-xs border ${statusColors[selectedConv.status] ?? ""}`}>
-                {statusLabels[selectedConv.status] ?? selectedConv.status}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge className={`text-xs border ${statusColors[selectedConv.status] ?? ""}`}>
+                  {statusLabels[selectedConv.status] ?? selectedConv.status}
+                </Badge>
+                {isDemo && (
+                  <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                    Demo
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Messages */}
@@ -243,17 +369,29 @@ export default function ConversasPage() {
                 </div>
               ) : (
                 messages.map((msg) => (
-                  <div key={msg.id} className={cn("flex", msg.role === "user" ? "justify-start" : "justify-end")}>
-                    <div
-                      className={cn(
-                        "max-w-xs px-4 py-2 rounded-2xl text-sm",
-                        msg.role === "user"
-                          ? "bg-[#1a1a1a] text-white rounded-tl-sm"
-                          : "bg-[#25D366] text-black font-medium rounded-tr-sm"
-                      )}
-                    >
-                      {msg.content}
-                    </div>
+                  <div
+                    key={msg.id}
+                    className={cn(
+                      "flex",
+                      msg.role === "user" ? "justify-start" : msg.role === "system" ? "justify-center" : "justify-end"
+                    )}
+                  >
+                    {msg.role === "system" ? (
+                      <div className="text-xs text-gray-500 bg-[#1a1a1a] px-3 py-1.5 rounded-full border border-[#2a2a2a]">
+                        {msg.content}
+                      </div>
+                    ) : (
+                      <div
+                        className={cn(
+                          "max-w-xs px-4 py-2 rounded-2xl text-sm",
+                          msg.role === "user"
+                            ? "bg-[#1a1a1a] text-white rounded-tl-sm"
+                            : "bg-[#25D366] text-black font-medium rounded-tr-sm"
+                        )}
+                      >
+                        {msg.content}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -263,7 +401,7 @@ export default function ConversasPage() {
             {/* Input */}
             <div className="p-4 border-t border-[#1a1a1a] bg-[#111111] flex gap-2">
               <Input
-                placeholder="Responder manualmente..."
+                placeholder={isDemo ? "Modo demonstracao - resposta nao enviada ao cliente" : "Responder manualmente..."}
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 onKeyDown={(e) => {
