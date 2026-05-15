@@ -1,6 +1,7 @@
 import Link from "next/link";
 import LeadForm from "@/components/LeadForm";
 import ScrollButton from "@/components/ScrollButton";
+import FAQSection from "@/components/FAQSection";
 import { Check, MessageSquare } from "lucide-react";
 
 const stats = [
@@ -47,6 +48,33 @@ const niches = [
   { emoji: "📈", label: "Corretoras" },
 ];
 
+const testimonials = [
+  {
+    initials: "AP",
+    name: "Ana Paula M.",
+    city: "São Paulo",
+    role: "Clínica Estética",
+    text: "Em 2 semanas o bot já estava atendendo sozinho. Economizamos 3h por dia de resposta manual.",
+    gradient: "from-pink-500 to-rose-600",
+  },
+  {
+    initials: "CR",
+    name: "Dr. Carlos R.",
+    city: "Belo Horizonte",
+    role: "Dentista",
+    text: "Meus pacientes adoram. Agenda sozinho, lembra do paciente, responde dúvidas. Perfeito.",
+    gradient: "from-blue-500 to-indigo-600",
+  },
+  {
+    initials: "ML",
+    name: "Marcos L.",
+    city: "Curitiba",
+    role: "Imobiliária",
+    text: "Aumentamos o contato com leads em 40%. Nenhum cliente fica sem resposta agora.",
+    gradient: "from-green-500 to-teal-600",
+  },
+];
+
 const pricingPlans = [
   {
     name: "Starter",
@@ -54,6 +82,7 @@ const pricingPlans = [
     period: "/mes",
     highlight: false,
     badge: null as string | null,
+    waText: "Quero%20o%20Plano%20Starter%20do%20ZapReply%20AI",
     features: [
       "1 numero WhatsApp",
       "Respostas com IA",
@@ -63,11 +92,12 @@ const pricingPlans = [
     ],
   },
   {
-    name: "Pro",
+    name: "Profissional",
     price: "R$1.997",
     period: "/mes",
     highlight: true,
     badge: "Mais Popular" as string | null,
+    waText: "Quero%20o%20Plano%20Profissional%20do%20ZapReply%20AI",
     features: [
       "Tudo do Starter",
       "Follow-ups avancados",
@@ -82,6 +112,7 @@ const pricingPlans = [
     period: "",
     highlight: false,
     badge: null as string | null,
+    waText: "Quero%20o%20Plano%20Enterprise%20do%20ZapReply%20AI",
     features: [
       "Multiplos numeros",
       "White-label",
@@ -92,26 +123,39 @@ const pricingPlans = [
 ];
 
 export default function LandingPage() {
+  const salesWA = process.env.NEXT_PUBLIC_SALES_WHATSAPP ?? "5511999999999";
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-6 h-6 text-green-600" />
-            <span className="font-bold text-gray-900 text-lg">ZapReply AI</span>
-          </div>
-          <Link
-            href="/login"
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-600 border border-gray-200 rounded-lg hover:border-green-300 transition-colors"
-          >
-            Login
-          </Link>
-        </div>
-      </nav>
+      {/* ===== FIXED TOP: Urgency Banner + Navbar ===== */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        {/* Urgency Banner */}
+        <a
+          href="#demo-form"
+          className="block bg-gradient-to-r from-red-700 to-orange-600 text-white text-center py-2 px-4 text-sm font-semibold hover:from-red-800 hover:to-orange-700 transition-colors"
+        >
+          🔥 Apenas 3 vagas abertas este mês para novos clientes — Garante a sua →
+        </a>
 
-      {/* Hero */}
-      <section className="pt-28 pb-20 px-4 bg-gradient-to-b from-green-50 to-white">
+        {/* Navbar */}
+        <nav className="bg-white border-b border-gray-100 shadow-sm">
+          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-6 h-6 text-green-600" />
+              <span className="font-bold text-gray-900 text-lg">ZapReply AI</span>
+            </div>
+            <Link
+              href="/login"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-green-600 border border-gray-200 rounded-lg hover:border-green-300 transition-colors"
+            >
+              Login
+            </Link>
+          </div>
+        </nav>
+      </div>
+
+      {/* Hero — pt accounts for banner (~36px) + navbar (64px) */}
+      <section className="pt-36 pb-20 px-4 bg-gradient-to-b from-green-50 to-white">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -132,7 +176,7 @@ export default function LandingPage() {
                 </ScrollButton>
                 {process.env.NEXT_PUBLIC_WHATSAPP_DEMO_NUMBER ? (
                   <a
-                    href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_DEMO_NUMBER}?text=Olá!%20Quero%20conhecer%20o%20ZapReply%20AI.`}
+                    href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_DEMO_NUMBER}?text=Ol%C3%A1!%20Quero%20conhecer%20o%20ZapReply%20AI.`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="border border-green-600 text-green-600 hover:bg-green-50 font-semibold px-8 py-3 rounded-lg transition-colors text-base text-center"
@@ -288,6 +332,40 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== TESTIMONIALS ===== */}
+      <section className="py-20 px-4 bg-gray-900">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
+            O que nossos clientes dizem
+          </h2>
+          <p className="text-center text-gray-400 mb-12">
+            Empresas brasileiras que já automatizaram seu atendimento com o ZapReply AI.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((t) => (
+              <div key={t.name} className="bg-gray-800 border border-gray-700 rounded-2xl p-6 flex flex-col gap-4">
+                <div className="text-yellow-400 text-lg">⭐⭐⭐⭐⭐</div>
+                <p className="text-gray-200 text-sm leading-relaxed flex-1">
+                  &ldquo;{t.text}&rdquo;
+                </p>
+                <div className="flex items-center gap-3 pt-2 border-t border-gray-700">
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.gradient} flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+                    {t.initials}
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold text-sm">{t.name}</p>
+                    <p className="text-gray-400 text-xs">{t.role} · {t.city}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== FAQ ===== */}
+      <FAQSection />
+
       {/* Pricing */}
       <section className="py-20 px-4 bg-white">
         <div className="max-w-5xl mx-auto">
@@ -323,16 +401,18 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <ScrollButton
-                  targetId="demo-form"
-                  className={`w-full py-3 rounded-lg font-semibold text-sm transition-colors ${
+                <a
+                  href={`https://wa.me/${salesWA}?text=${plan.waText}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`block w-full py-3 rounded-lg font-semibold text-sm text-center transition-colors ${
                     plan.highlight
                       ? "bg-green-600 hover:bg-green-700 text-white"
                       : "border border-gray-300 hover:border-green-400 text-gray-700 hover:text-green-600"
                   }`}
                 >
-                  Quero uma demonstracao
-                </ScrollButton>
+                  Quero este plano
+                </a>
               </div>
             ))}
           </div>
@@ -375,8 +455,16 @@ export default function LandingPage() {
               <Link href="/login" className="hover:text-white transition-colors">Login</Link>
             </div>
           </div>
-          <div className="border-t border-gray-800 pt-6 text-center">
-            <p className="text-gray-500 text-sm">2025 ZapReply AI. Todos os direitos reservados.</p>
+          <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-gray-500 text-sm">© 2025 ZapReply AI. Todos os direitos reservados.</p>
+            <div className="flex gap-6 text-sm text-gray-500">
+              <Link href="/politica-de-privacidade" className="hover:text-gray-300 transition-colors">
+                Política de Privacidade
+              </Link>
+              <Link href="/termos" className="hover:text-gray-300 transition-colors">
+                Termos de Uso
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

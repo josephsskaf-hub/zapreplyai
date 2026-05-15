@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type FormState = {
   name: string;
@@ -10,7 +11,14 @@ type FormState = {
   monthly_volume: string;
 };
 
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
 export default function LeadForm() {
+  const router = useRouter();
   const [form, setForm] = useState<FormState>({
     name: "",
     company: "",
@@ -19,7 +27,6 @@ export default function LeadForm() {
     monthly_volume: "",
   });
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -37,7 +44,15 @@ export default function LeadForm() {
         body: JSON.stringify({ ...form, source: "landing_page" }),
       });
       if (res.ok) {
-        setSuccess(true);
+        // GA4 conversion event
+        if (typeof window !== "undefined" && window.gtag) {
+          window.gtag("event", "generate_lead", {
+            event_category: "lead",
+            event_label: "whatsapp_demo_form",
+            value: 997,
+          });
+        }
+        router.push("/obrigado");
       } else {
         const data = await res.json();
         setError(data.error || "Erro ao enviar. Tente novamente.");
@@ -48,18 +63,6 @@ export default function LeadForm() {
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="text-center py-10 px-4">
-        <div className="text-5xl mb-4">🚀</div>
-        <p className="text-xl font-semibold text-gray-900 mb-2">Recebemos sua solicitação!</p>
-        <p className="text-gray-600">
-          Perfeito. Vamos te chamar no WhatsApp para mostrar uma demonstração do ZapReply AI.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
